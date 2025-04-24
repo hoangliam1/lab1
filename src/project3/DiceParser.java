@@ -1,16 +1,22 @@
-package project3;
-
 import java.util.*;
+import java.util.logging.*;
 
-/**
- * @author Hoang Lam.
- */
 public class DiceParser {
 
-    /* this is a helper class to manage the input "stream" */
-    private static class StringStream {
+    // Logger setup
+    private static final Logger logger = Logger.getLogger(DiceParser.class.getName());
 
-        private StringBuffer buff;
+    static {
+        Logger rootLogger = Logger.getLogger("");
+        Handler consoleHandler = new ConsoleHandler();
+        consoleHandler.setLevel(Level.FINE);
+        rootLogger.addHandler(consoleHandler);
+        rootLogger.setLevel(Level.FINE);
+        logger.setLevel(Level.FINE);
+    }
+
+    private static class StringStream {
+        StringBuffer buff;
 
         public StringStream(String s) {
             buff = new StringBuffer(s);
@@ -21,9 +27,8 @@ public class DiceParser {
             char curr;
             while (index < buff.length()) {
                 curr = buff.charAt(index);
-                if (!Character.isWhitespace(curr)) {
+                if (!Character.isWhitespace(curr))
                     break;
-                }
                 index++;
             }
             buff = buff.delete(0, index);
@@ -44,14 +49,12 @@ public class DiceParser {
             munchWhiteSpace();
             while (index < buff.length()) {
                 curr = buff.charAt(index);
-                if (!Character.isDigit(curr)) {
+                if (!Character.isDigit(curr))
                     break;
-                }
                 index++;
             }
             try {
-                Integer ans;
-                ans = Integer.parseInt(buff.substring(0, index));
+                Integer ans = Integer.parseInt(buff.substring(0, index));
                 buff = buff.delete(0, index);
                 return ans;
             } catch (Exception e) {
@@ -64,17 +67,15 @@ public class DiceParser {
             StringStream state = save();
             if (checkAndEat("+")) {
                 Integer ans = readInt();
-                if (ans != null) {
+                if (ans != null)
                     return ans;
-                }
                 restore(state);
                 return null;
             }
             if (checkAndEat("-")) {
                 Integer ans = readInt();
-                if (ans != null) {
+                if (ans != null)
                     return -ans;
-                }
                 restore(state);
                 return null;
             }
@@ -95,7 +96,7 @@ public class DiceParser {
         }
 
         public void restore(StringStream ss) {
-            this.buff = new StringBuffer(ss.buff.toString());
+            this.buff = new StringBuffer(ss.buff);
         }
 
         public String toString() {
@@ -104,11 +105,16 @@ public class DiceParser {
     }
 
     public static Vector<DieRoll> parseRoll(String s) {
+        logger.info("Parsing input: \"" + s + "\"");
+
         StringStream ss = new StringStream(s.toLowerCase());
         Vector<DieRoll> v = parseRollInner(ss, new Vector<DieRoll>());
         if (ss.isEmpty()) {
+            logger.fine("Parse success: " + v.size() + " die rolls parsed");
             return v;
         }
+
+        logger.warning("Unparsed remainder: " + ss.toString());
         return null;
     }
 
@@ -126,21 +132,25 @@ public class DiceParser {
 
     private static Vector<DieRoll> parseXDice(StringStream ss) {
         StringStream saved = ss.save();
-        // Refactored: Fix lỗi cú pháp, đơn giản hoá logic đọc số lần nhân
         Integer x = ss.getInt();
         int num = 1;
+
         if (x != null) {
             if (ss.checkAndEat("x")) {
                 num = x;
+                logger.fine("Found 'x', repeating dice " + num + " times");
             } else {
-                ss.restore(saved); // khôi phục nếu không có 'x'
+                ss.restore(saved);
             }
         }
+
         DieRoll dr = parseDice(ss);
         if (dr == null) {
+            logger.warning("Failed to parse dice after optional 'x'");
             return null;
         }
-        Vector<DieRoll> ans = new Vector<DieRoll>();
+
+        Vector<DieRoll> ans = new Vector<>();
         for (int i = 0; i < num; i++) {
             ans.add(dr);
         }
@@ -154,52 +164,47 @@ public class DiceParser {
     private static DieRoll parseDiceInner(StringStream ss) {
         Integer num = ss.getInt();
         int dsides;
-        int ndice;
-        if (num == null) {
-            ndice = 1;
-        } else {
-            ndice = num;
-        }
+        int ndice = (num == null) ? 1 : num;
+
         if (ss.checkAndEat("d")) {
             num = ss.getInt();
             if (num == null) {
+                logger.warning("Expected number after 'd'");
                 return null;
             }
             dsides = num;
         } else {
+            logger.warning("Expected 'd' in dice definition");
             return null;
         }
+
         num = ss.readSgnInt();
-        int bonus;
-        if (num == null) {
-            bonus = 0;
-        } else {
-            bonus = num;
-        }
+        int bonus = (num != null) ? num : 0;
+
+        logger.fine("Parsed dice: " + ndice + "d" + dsides + (bonus != 0 ? (bonus > 0 ? "+" : "") + bonus : ""));
         return new DieRoll(ndice, dsides, bonus);
     }
 
     private static DieRoll parseDTail(DieRoll r1, StringStream ss) {
-        if (r1 == null) {
+        if (r1 == null)
             return null;
-        }
         if (ss.checkAndEat("&")) {
             DieRoll d2 = parseDice(ss);
-            return parseDTail(new DiceSum(r1, d2), ss);
+            // Future implementation: return parseDTail(new DiceSum(r1,d2),ss);
         } else {
             return r1;
         }
+        return r1;
     }
 
     private static void test(String s) {
         Vector<DieRoll> v = parseRoll(s);
-        if (v == null) {
+        if (v == null)
             System.out.println("Failure:" + s);
-        } else {
+        else {
             System.out.println("Results for " + s + ":");
             for (DieRoll dr : v) {
-                System.out.print(dr);
-                System.out.print(": ");
+                System.out.print(dr + ": ");
                 System.out.println(dr.makeRoll());
             }
         }
