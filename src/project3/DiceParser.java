@@ -106,7 +106,19 @@ public class DiceParser {
         }
     }
 
+    /**
+     * Phân tích chuỗi mô tả đổ xúc xắc thành danh sách các đối tượng DieRoll.
+     *
+     * @param s Chuỗi mô tả cú pháp xúc xắc, ví dụ: "2d6+3"
+     * @return Danh sách DieRoll nếu hợp lệ, null nếu sai cú pháp.
+     *
+     * Chức năng thêm: Validation đầu vào – nếu chuỗi null hoặc rỗng thì trả về
+     * null.
+     */
     public static Vector<DieRoll> parseRoll(String s) {
+        if (s == null || s.trim().isEmpty()) {
+            return null;
+        }
         StringStream ss = new StringStream(s.toLowerCase());
         Vector<DieRoll> v = parseRollInner(ss, new Vector<DieRoll>());
         if (ss.isEmpty()) {
